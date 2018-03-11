@@ -1,0 +1,5 @@
+package cashflow
+
+class Pet {
+
+}
