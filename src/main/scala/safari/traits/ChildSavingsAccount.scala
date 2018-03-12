@@ -1,9 +1,9 @@
-package traits
+package safari.traits
 
 import java.time.{LocalDateTime, ZoneId}
 import java.util.concurrent.TimeUnit
 
-import cashflow.patternsmatching.{Account, Address}
+import safari.cashflow.patternsmatching.{Account, Address}
 
 class ChildSavingsAccount(person: Person, address: Address, openingBalance: Double = 0.0, currency: String)
   extends Account(person, address, openingBalance, currency) with MaturingAmount {

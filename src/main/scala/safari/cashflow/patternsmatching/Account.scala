@@ -1,10 +1,9 @@
-package cashflow.patternsmatching
+package safari.cashflow.patternsmatching
 
 import java.time.LocalDateTime
 
-import cashflow.Cashflow
 import collections.Transaction
-import traits.Person
+import safari.traits.Person
 
 import scala.collection.mutable.ListBuffer
 

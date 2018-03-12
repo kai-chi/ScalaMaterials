@@ -1,4 +1,4 @@
-package cashflow
+package safari.cashflow
 
 import java.time.LocalDateTime
 

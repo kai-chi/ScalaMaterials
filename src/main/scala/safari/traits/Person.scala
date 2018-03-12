@@ -1,4 +1,4 @@
-package traits
+package safari.traits
 
 import java.time.LocalDateTime
 

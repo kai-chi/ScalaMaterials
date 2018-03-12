@@ -1,8 +1,10 @@
+package safari
+
 import java.time.LocalDateTime
 
-import cashflow.patternsmatching.{Account, Address}
 import org.scalatest.{FlatSpec, Matchers}
-import traits.Person
+import safari.cashflow.patternsmatching.{Account, Address}
+import safari.traits.Person
 
 class AccountTest extends FlatSpec with Matchers {
 

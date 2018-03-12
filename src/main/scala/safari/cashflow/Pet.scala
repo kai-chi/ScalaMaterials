@@ -1,4 +1,4 @@
-package cashflow
+package safari.cashflow
 
 class Pet {
 

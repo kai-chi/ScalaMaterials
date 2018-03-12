@@ -1,5 +1,8 @@
-import collection.mutable.Stack
+package safari
+
 import org.scalatest._
+
+import scala.collection.mutable.Stack
 
 class ExampleSpec extends FlatSpec with Matchers {
 
