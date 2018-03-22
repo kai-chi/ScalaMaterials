@@ -2,7 +2,7 @@ package hackerrank.datastructures
 
 object Arrays2D {
 
-  val coordinates: List[Tuple2[Integer, Integer]] =
+  val coordinates: List[(Integer, Integer)] =
     List((0, 0), (0, 1), (0, 2),
                  (1, 1),
          (2, 0), (2, 1), (2, 2))
