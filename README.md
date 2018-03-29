@@ -1,2 +1,2 @@
-###Repo
-Repo containing code while learning Scala
+#Repo
+Finally one place where all the educational materials are put
