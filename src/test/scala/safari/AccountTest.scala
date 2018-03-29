@@ -28,9 +28,11 @@ class AccountTest extends FlatSpec with Matchers {
   }
 
   it should "have the correct balance after one withdraw" in {
-    val a = Account(p, ad, 100.0, c)
-    a.withdraw(25.0)
-    a.balance should be (75.0)
+    val amy = Account(Person("Amy", LocalDateTime.now), Address("Warsaw", "PL"), 100.0, "USD")
+    println(s"AMY: ${amy.balance}")
+    amy.withdraw(25.0)
+    println(s"AMY: ${amy.balance}")
+    amy.balance should be (75.0)
   }
 
   it should "not withdraw too much" in {

@@ -24,7 +24,7 @@ case class Account(person: Person, address: Address, openingBalance: Double = 0.
 //
 //    }
 
-  def deposit(amount: Double, reason: String = "<Deposit>") =
+  def deposit(amount: Double, reason: String = "<Deposit>"): Boolean =
     if (amount > 0.0) {
       transactions += Transaction(amount, reason, java.time.LocalDateTime.now())
       true
@@ -32,13 +32,12 @@ case class Account(person: Person, address: Address, openingBalance: Double = 0.
     else
       false
 
-  def withdraw(amount: Double, reason: String = "withdraw") =
+  def withdraw(amount: Double, reason: String = "withdraw"): Boolean =
     amount match {
-      case amt if amt > 0.0 && theBalance - amt > 0.0 => {
-        theBalance -= amount
-        transactions += Transaction(amt, reason, LocalDateTime.now())
+      case amt if amt > 0.0 && theBalance - amt > 0.0 =>
+        theBalance = theBalance - amt
+        transactions += Transaction(-amt, reason, LocalDateTime.now())
         true
-      }
       case _ => false
     }
 
@@ -46,14 +45,15 @@ case class Account(person: Person, address: Address, openingBalance: Double = 0.
   def balance: Double = transactions.foldLeft(0.0)((x, y) => x + y.amount)
 
 
-  def isOverdrawn() = {
+  //noinspection AccessorLikeMethodIsUnit
+  def isOverdrawn(): Unit = {
     theBalance match {
       case b if b < 0.0 => println(s"account is overdrawn: $b")
       case b => println(s"account is not overdrawn: $b")
     }
   }
 
-  def getTransactions() = transactions.toList
+  def getTransactions: List[Transaction] = transactions.toList
 }
 
 object Account {
