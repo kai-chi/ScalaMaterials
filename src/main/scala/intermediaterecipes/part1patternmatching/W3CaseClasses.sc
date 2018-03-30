@@ -1,8 +1,11 @@
 val a = Animal("Santiago", 12, "Cat")
 
 new Animal("Santiago", 12, "Cat")
-val cat = Classification("felix", "felicis")
+
 val Animal(name, _, Classification(_, species)) = res6
+
+val cat = Classification("felix", "felicis")
+
 
 def describeAnimal(animal: Animal): String = {
   animal match {
@@ -72,11 +75,11 @@ case class Animal(name: String, age: Int, species: String)
 
 describeAnimal(res6)
 
-case class Classification(genus: String, species: String)
-
 describeAnimal(res6)
 
 case class Animal(name: String, age: Int, classification: Classification)
+
+case class Classification(genus: String, species: String)
 
 name
 species
