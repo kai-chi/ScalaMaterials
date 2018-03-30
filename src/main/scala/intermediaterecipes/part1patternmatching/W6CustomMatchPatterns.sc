@@ -12,7 +12,6 @@ def namesOfFarmAnimals(myAnimals: Seq[Animal]): Seq[String] = {
       ""
   }
 }
-
 //1.
 //def moveToAFarm(myAnimals: Seq[Animal]): Seq[Animal] = {
 //  myAnimals.filter(isFarmAnimal)
@@ -42,6 +41,8 @@ def namesOfFarmAnimals(myAnimals: Seq[Animal]): Seq[String] = {
 //      ""
 //  }
 //}
+
+case class Animal(name: String, species: String)
 
 def namesOfFarmAnimals(myAnimals: Seq[Animal]): Seq[String] = {
   myAnimals.filter {
@@ -115,11 +116,12 @@ def tasksForFarmAnimals(animals: Seq[Animal]): Seq[String] = {
   }
 }
 
+case class Animal(name: String,age: Int, species: String)
+
 namesOfFarmAnimals(Seq(Animal("Bessy", 3, "Cow"), Animal("Santiago", 1,  "Cat"), Animal("Cleo", 5, "Dog"), Animal("Betty", 9, "Cow")))
 
-case class Animal(name: String, species: String)
 
-case class Animal(name: String,age: Int, species: String)
+
 
 namesOfFarmAnimals(Seq(Animal("Bessy", 3, "Cow"), Animal("Santiago", 1,  "Cat"), Animal("Cleo", 5, "Dog"), Animal("Betty", 9, "Cow")))
 
