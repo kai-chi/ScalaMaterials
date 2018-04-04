@@ -1,10 +1,12 @@
 package intermediaterecipes
 
 import intermediaterecipes.part2Testing.farm._
+import org.scalacheck._
+import org.specs2.ScalaCheck
 import org.specs2.mock._
 import org.specs2.mutable.Specification
 
-class Test3ModifiedFarmSpec extends Specification with Mockito {
+class Test3ModifiedFarmSpec extends Specification with Mockito with ScalaCheck{
   "ModifiedFarm" should {
     val chicken = Animal("Bob", 12, Chicken)
     val cow = Animal("Bessy", 12, Cow)
@@ -52,5 +54,18 @@ class Test3ModifiedFarmSpec extends Specification with Mockito {
       there was 2.times(tasker).tasksForTheDay(13)
     }
 
+    "runs correctly for any number of days" in Prop.forAll(Gen.choose(0, 365)) { (days: Int) =>
+      val tasker = mock[ModifiedFarmTasker]
+      val farm = new ModifiedFarm("My Farm", tasker)
+
+      val basicTask = FarmTask(chicken, "checking for eggs", 12)
+
+      tasker.tasksForTheDay(anyInt) returns Seq(basicTask)
+
+      val farmRun = farm.runForDays(13, days)
+      farmRun must have size (days)
+      farmRun.filter(_ == basicTask) must have size (days)
+      there was days.times(tasker).tasksForTheDay(13)
+    }
   }
 }
