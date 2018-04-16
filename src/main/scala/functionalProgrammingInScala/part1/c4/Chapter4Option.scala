@@ -1,15 +1,11 @@
-package functionalProgrammingInScala.part1
+package functionalProgrammingInScala.part1.c4
 
 import scala.{Either => _, Option => _, Some => _} // hide std library `Option`, `Some` and `Either`, since we are writing our own in this chapter
 
 sealed trait Option[+A] {
-  def flatMap_1[B](f: A => Option[B]): Option[B] = this match {
-    case None => None
-    case Some(a) => f(a)
-  }
 
   def orElse[B >: A](ob: => Option[B]): Option[B] =
-    this map (Some(_)) getOrElse ob
+  this map (Some(_)) getOrElse ob
 
   def orElse_1[B >: A](ob: => Option[B]): Option[B] = this match {
     case None => ob
@@ -17,10 +13,15 @@ sealed trait Option[+A] {
   }
 
   def filter(f: A => Boolean): Option[A] =
-    flatMap(a => if (f(a)) Some(a) else None)
+  flatMap(a => if (f(a)) Some(a) else None)
 
   def flatMap[B](f: A => Option[B]): Option[B] =
-    map(f) getOrElse None
+  map(f) getOrElse None
+
+  def flatMap_1[B](f: A => Option[B]): Option[B] = this match {
+    case None => None
+    case Some(a) => f(a)
+  }
 
   def map[B](f: A => B): Option[B] = this match {
     case Some(a) => Some(f(a))
