@@ -54,12 +54,12 @@ trait Stream[+A] {
 
   // Exercise 5.4
   //not confirmed that it's right
-  def forAll(p: A => Boolean): Boolean = this match {
+  def forAll_1(p: A => Boolean): Boolean = this match {
     case Cons(h, t) => p(h()) && t().forAll(p)
     case _ => false
   }
 
-  def forAll_1(p: A => Boolean): Boolean =
+  def forAll(p: A => Boolean): Boolean =
     foldRight(true)((a, b) => p(a) && b)
 
 
@@ -126,8 +126,27 @@ trait Stream[+A] {
     }
 
   // Exercise 5.14
+  def startsWith[A](s: Stream[A]): Boolean = {
+    zipAll(s).takeWhile(_._2.isDefined).forAll { case (h1, h2) => h1 == h2 }
+  }
+
   // Exercise 5.15
+  def tails: Stream[Stream[A]] =
+    unfold(this) {
+      case Empty => None
+      case s => Some((s, s drop 1))
+    } append Stream(empty)
+
+  def hasSubsequence[A](s: Stream[A]): Boolean =
+    tails exists (_ startsWith s)
+
   // Exercise 5.16
+  def scanRight[B](z: B)(f: (A, => B) => B): Stream[B] =
+    foldRight((z, Stream(z)))((a, p0) => {
+      lazy val p1 = p0
+      val b2 = f(a, p1._1)
+      (b2, cons(b2, p1._2))
+    })._2
 }
 
 case object Empty extends Stream[Nothing]
