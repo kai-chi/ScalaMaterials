@@ -1,106 +1,167 @@
 package functionalProgrammingInScala.part2.c7
 
-import java.util.concurrent.{ExecutorService, Future, TimeUnit}
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+
+import functionalProgrammingInScala.part2.c7.Par.Par
 
 object Par {
 
+  sealed trait Future[A] {
+    private[c7] def apply(cb: A => Unit): Unit
+  }
+
   type Par[A] = ExecutorService => Future[A]
 
-  def unit[A](a: A): Par[A] = (es: ExecutorService) => UnitFuture(a)
+  def unit[A](a: A): Par[A] =
+    es => new Future[A] {
+      private[c7] def apply(k: A => Unit): Unit = k(a)
+    }
+
+  private case class UnitFuture[A](get: A) extends Future[A] {
+    def cancel(b: Boolean): Boolean = false
+    def isCancelled: Boolean = false
+    def isDone: Boolean = true
+    def get(l: Long, timeUnit: TimeUnit): A = get
+  }
+
+  //indicates that the given Par should be run in a separate logical thread
+  def fork[A](a: => Par[A]): Par[A] =
+    es => new Future[A] {
+      private[c7] def apply(cb: A => Unit): Unit =
+        eval(es)(a(es(cb)))
+    }
+
+  def eval(es: ExecutorService)(r: => Unit): Unit =
+    es.submit(new Callable[Unit] {def call = r})
 
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
-  def run[A](s: ExecutorService)(a: Par[A]): A = a(s)
-
-  def fork[A](a: => Par[A]): Par[A] =
-    es => es.submit(() => a(es).get)
-
-  def map2[A, B, C](a: Par[A], b: Par[B])(f: (A, B) => C): Par[C] =
-    (es: ExecutorService) => {
-      val af = a(es)
-      val bf = b(es)
-      //      UnitFuture(f(af.get, bf.get))
-      //Exercise 7.3
-      Map2Future(af, bf, f)
-    }
-
-  def sum(ints: IndexedSeq[Int]): Par[Int] = {
-    if (ints.size <= 1) {
-      Par.unit(ints.headOption getOrElse 0)
-    }
-    else {
-      val (l, r) = ints.splitAt(ints.length / 2)
-      Par.map2(Par.fork(sum(l)), Par.fork(sum(r)))(_ + _)
-    }
+  def run[A](es: ExecutorService)(p: Par[A]): A = {
+    val ref = new AtomicReference[A]
+    val latch = new CountDownLatch(1)
+    p(es) { a => ref.set(a); latch.countDown }
+    latch.await
+    ref.get
   }
 
-  //Exercise 7.4
-  def asyncF[A, B](f: A => B): A => Par[B] =
+  def map2[A, B, C](p: Par[A], p2: Par[B])(f: (A, B) => C): Par[C] =
+    es => new Future[C] {
+      private[c7] def apply(cb: C => Unit): Unit = {
+        var ar: Option[A] = None
+        var br: Option[B] = None
+
+        val combiner = Actor[Either[A,B]](es) {
+          case Left(a) => br match {
+            case None => ar = Some(a)
+            case Some(b) => eval(es)(cb(f(a,b)))
+          }
+          case Right(b) => ar match {
+            case None => br = Some(b)
+            case Some(a) => eval(es)(cb(f(a,b)))
+          }
+        }
+
+        p(es)(a => combiner ! Left(a))
+        p2(es)(b => combiner ! Right(b))
+      }
+    }
+
+  // Exercise 7.4 - convert any function to one that evaluates its result asynchronously
+  def asyncF[A,B](f: A => B): A => Par[B] =
     a => lazyUnit(f(a))
 
-  def sortPar(parList: Par[List[Int]]): Par[List[Int]] =
-    map2(parList, unit(()))((a, _) => a.sorted)
+  def map[A,B](pa: Par[A])(f: A => B): Par[B] =
+    map2(pa, unit(()))((a,_) => f(a))
 
-  def map[A, B](pa: Par[A])(f: A => B): Par[B] =
-    map2(pa, unit(()))((a, _) => f(a))
+  def sortPar(parList: Par[List[Int]]): Par[List[Int]] = map(parList)(_.sorted)
 
-  def sortParViaMap(parList: Par[List[Int]]) = map(parList)(_.sorted)
+  // Exercise 7.5
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] =
+    ps.foldRight[Par[List[A]]](unit(List()))((h,t) => map2(h,t)(_ :: _  ))
 
-  def sequence[A](fbs: List[Par[A]]): Par[List[A]] =
-    fbs.foldRight[Par[List[A]]](unit(List()))((h,t) => map2(h,t)(_ :: _))
-
-  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
-    val pars: List[Par[List[A]]] =
-      as map asyncF((a: A) => if (f(a)) List(a) else List())
-    map(sequence(pars))(_.flatten)
-
-  }
-
-  def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] = {
+  def parMap[A,B](ps: List[A])(f: A => B): Par[List[B]] = fork {
     val fbs: List[Par[B]] = ps.map(asyncF(f))
     sequence(fbs)
   }
 
-
-  private case class UnitFuture[A](a: A) extends Future[A] {
-    override def cancel(b: Boolean): Boolean = false
-
-    override def isCancelled: Boolean = false
-
-    override def isDone: Boolean = true
-
-    override def get(): A = get
-
-    override def get(l: Long, timeUnit: TimeUnit): A = ???
+  // Exercise 7.6
+  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
+    val pars: List[Par[List[A]]] =
+      as map asyncF((a: A) => if (f(a)) List(a) else List())
+    map(sequence(pars))(_.flatten)
   }
 
-  private case class Map2Future[A, B, C](af: Future[A], bf: Future[B], f: (A, B) => C) extends Future[C] {
+  def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean =
+    p(e).get == p2(e).get
 
-    @volatile var cache: Option[C] = None
+  def delay[A](fa: => Par[A]): Par[A] =
+    es => fa(es)
 
-    override def cancel(b: Boolean): Boolean = af.cancel(b) || bf.cancel(b)
-
-    override def isCancelled: Boolean = af.isCancelled || bf.isCancelled
-
-    override def isDone: Boolean = cache.isDefined
-
-    override def get(): C = compute(Long.MaxValue)
-
-    override def get(l: Long, timeUnit: TimeUnit): C =
-      compute(TimeUnit.NANOSECONDS.convert(l, timeUnit))
-
-    private def compute(timeoutInNanos: Long): C = cache match {
-      case Some(c) => c
-      case None =>
-        val start = System.nanoTime
-        val ar = af.get(timeoutInNanos, TimeUnit.NANOSECONDS)
-        val stop = System.nanoTime
-        val aTime = stop - start
-        val br = bf.get(timeoutInNanos - aTime, TimeUnit.NANOSECONDS)
-        val ret = f(ar, br)
-        cache = Some(ret)
-        ret
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    es => {
+      val res = run(es)(n).get
+      run(es)(choices(res))
     }
-  }
+
+  def choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+      choiceN(map(cond)(a => if(a) 0 else 1))(List(t, f))
+
+  def choiceMap[K,V](key: Par[K])(choices: Map[K,Par[V]]): Par[V] =
+    es => {
+      val res = run(es)(key).get
+      run(es)(choices(res))
+    }
+
+  def chooser[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] =
+    es => {
+      val c = run(es)(pa).get
+      run(es)(choices(c))
+    }
+
+  def flatMap[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] =
+    es => {
+      val c = run(es)(pa).get
+      run(es)(choices(c))
+    }
+
+  def choiceViaFlatMap[A](p: Par[Boolean])(f: Par[A], t: Par[A]): Par[A] =
+    flatMap(p)(b => if(b) t else f)
+
+  def choiceNViaFlatMap[A](p: Par[Int])(choices: List[Par[A]]): Par[A] =
+    flatMap(p)(i => choices(i))
+
+  def join[A](a: Par[Par[A]]): Par[A] =
+    es => run(es)(run(es)(a).get)
+
+  def joinViaFlatMap[A](a: Par[Par[A]]): Par[A] =
+    flatMap(a)(x => x)
+
+  def flatMapViaJoin[A,B](p: Par[A])(f: A => Par[B]): Par[B] =
+    join(map(p)(f))
+}
+
+object Exercices {
+
+  def sum(ints: IndexedSeq[Int]): Int =
+    if (ints.size <= 1)
+      ints.headOption getOrElse 0
+    else {
+      val (l, r) = ints.splitAt(ints.length / 2)
+      val sumL: Par[Int] = Par.unit(sum(l))
+      val sumR: Par[Int] = Par.unit(sum(r))
+      Par.run(sumL) + Par.run(sumR)
+    }
+
+  def sum(ints: IndexedSeq[Int]): Par[Int] =
+    if (ints.size <= 1)
+      Par.unit(ints.headOption getOrElse 0)
+    else {
+      val (l, r) = ints.splitAt(ints.length / 2)
+      Par.map2(Par.fork(sum(l)), Par.fork(sum(r)))(_ + _)
+    }
 
 }
